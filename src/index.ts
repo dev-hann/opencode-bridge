@@ -67,9 +67,6 @@ const DIRECTIVE = [
   "— the user copies this to join via terminal.",
   "Then STOP — do NOT poll, sleep, check status, or wait for completion.",
   "The user monitors progress directly in OpenCode. Continue only when the user asks.",
-  "After reporting the dispatch result, say NOTHING else. Do NOT add phrases like",
-  "'진행 상황은... 확인하시고' or '끝나면 알려주세요' or '완료되면 ...이 생성됩니다'.",
-  "The dispatch result JSON already contains everything the user needs.",
   "</opencode_bridge_directive>",
 ].join("\n");
 
@@ -240,8 +237,7 @@ const entry: AnyPluginEntry = definePluginEntry({
         "This is the ONLY sanctioned path for code changes — do NOT use " +
         "terminal/write/edit for code implementation. " +
         "Break large tasks into 2-5 minute chunks before dispatching. " +
-        "Returns session info and web UI URL. " +
-        "You will be automatically notified when the task completes.",
+        "Returns session info and web UI URL.",
       parameters: Type.Object({
         directory: Type.String({
           description: "Absolute path to the project directory",
