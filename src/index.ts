@@ -67,6 +67,9 @@ const DIRECTIVE = [
   "— the user copies this to join via terminal.",
   "Then STOP — do NOT poll, sleep, check status, or wait for completion.",
   "The user monitors progress directly in OpenCode. Continue only when the user asks.",
+  "After reporting the dispatch result, say NOTHING else. Do NOT add phrases like",
+  "'진행 상황은... 확인하시고' or '끝나면 알려주세요' or '완료되면 ...이 생성됩니다'.",
+  "The dispatch result JSON already contains everything the user needs.",
   "</opencode_bridge_directive>",
 ].join("\n");
 
@@ -176,11 +179,12 @@ const entry: AnyPluginEntry = definePluginEntry({
                 summary;
 
           // Inject into next agent turn for the session
-          await api.session.workflow.enqueueNextTurnInjection({
+          await api.session.workflow.scheduleSessionTurn({
             sessionKey: mapping.sessionKey,
-            text: message,
-            idempotencyKey: `opencode-bridge-${sessionId}`,
-            placement: "append_context",
+            delayMs: 0,
+            deleteAfterRun: true,
+            message,
+            tag: `opencode-bridge-callback-${sessionId}`,
           });
 
           api.logger?.info?.(
