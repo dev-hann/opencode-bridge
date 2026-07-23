@@ -1,8 +1,8 @@
-# opencode-bridge
+# hermes-opencode-bridge
 
-An [OpenClaw](https://github.com/openclaw/openclaw) plugin that delegates **ALL code work** to [OpenCode](https://opencode.ai).
+A [Hermes Agent](https://github.com/NousResearch/hermes-agent) plugin that delegates **ALL code work** to [OpenCode](https://opencode.ai).
 
-OpenClaw acts as the planner/reviewer; OpenCode acts as the coder. This plugin automates the handoff — server lifecycle, task dispatch, rule injection, and completion callback — so you never have to manually orchestrate the two agents.
+Hermes acts as the planner/reviewer; OpenCode acts as the coder. This plugin automates the handoff — server lifecycle, task dispatch, and rule injection — so you never have to manually orchestrate the two agents.
 
 ## How It Works
 
@@ -11,7 +11,7 @@ You: "Implement login API"
       │
       ▼
 ┌─────────────────────────────┐
-│ OpenClaw (Planner/Reviewer)  │
+│ Hermes (Planner/Reviewer)    │
 │ - Writes design docs         │
 │ - Breaks work into chunks    │
 │ - Calls opencode_dispatch    │
@@ -27,120 +27,121 @@ You: "Implement login API"
 You monitor progress at http://localhost:4096
 ```
 
-**Fire and forget** — OpenClaw dispatches the task and reports the session name + URL. You watch progress directly in the OpenCode web UI. OpenClaw does not poll or wait. When OpenCode finishes, it calls back to the plugin, which notifies the OpenClaw session.
+**Fire and forget** — Hermes dispatches the task and reports the session name + URL. You watch progress directly in the OpenCode web UI. Hermes does not poll or wait.
 
-## Architecture
+## Structure
+
+```
+hermes-opencode-bridge/
+├── plugin.yaml                       # Manifest (kind: standalone)
+├── __init__.py                       # register(ctx) — 1 tool + 2 hooks
+├── server.py                         # Server lifecycle (start / health check / dedup)
+├── api.py                            # HTTP client (dispatch + seed rules)
+├── template/
+│   └── hermes-opencode-bridge.md     # Default rules template (seed)
+└── README.md
+```
+
+User rules are stored **outside** the plugin directory at `~/.hermes/opencode-bridge-rule.md`, so plugin updates/reinstalls never touch them.
+
+## Three-Layer Rule Delivery
 
 | Layer | Audience | Mechanism | When |
 |-------|----------|-----------|------|
-| **[A]** Behavior rules | OpenClaw (LLM) | `before_prompt_build` hook injects directive | When code keywords are detected (English + Korean) |
-| **[B]** OpenCode work rules | OpenCode (LLM) | Rules prepended to the message body on dispatch | Every `opencode_dispatch` call |
-| **[C]** Server management | System | `gateway_start` hook starts OpenCode server | Gateway startup |
-| **[D]** Completion callback | OpenClaw (session) | HTTP route receives callback, injects next-turn notification | When OpenCode finishes a task |
+| **[A]** Hermes behavior rules | Hermes (LLM) | `pre_llm_call` hook injects a directive into the user message | When code keywords are detected (English + Korean) |
+| **[B]** OpenCode work rules | OpenCode (LLM) | Rules prepended to the message body on each dispatch | Every `opencode_dispatch` call |
+| **[C]** Server management | System | `on_session_start` hook starts OpenCode server in background | Session start |
 
-## Installation
+This separation means:
 
-### Prerequisites
+- OpenCode works fine **standalone** — the plugin doesn't touch `~/.config/opencode/opencode.json`
+- The collaboration rules only apply when Hermes dispatches work
+- Other users get the delegation behavior automatically (no manual SOUL.md/memory setup)
 
-1. **OpenClaw** — [install](https://docs.openclaw.ai)
-2. **OpenCode** — see [opencode.ai](https://opencode.ai)
+## Watching OpenCode Work
 
-### Install the plugin
+The OpenCode server exposes a web UI. Open this URL while a task is running:
 
-```bash
-# From local path
-openclaw plugins install ./opencode-bridge
-
-# From git
-openclaw plugins install git:github.com/dev-hann/opencode-bridge
+```
+http://localhost:4096
 ```
 
-### Configuration
+You'll see OpenCode's reasoning, tool calls, file edits, and terminal output in real time.
 
-Add the plugin path and entry in your `openclaw.json`:
-
-```json5
-{
-  plugins: {
-    load: {
-      paths: ["/path/to/opencode-bridge"],
-    },
-    entries: {
-      "opencode-bridge": {
-        enabled: true,
-      },
-    },
-  },
-}
-```
-
-Optional plugin config (defaults shown):
-
-```json5
-{
-  plugins: {
-    entries: {
-      "opencode-bridge": {
-        enabled: true,
-        config: {
-          port: 4096,           // OpenCode server port
-          hostname: "0.0.0.0",  // OpenCode server hostname
-          // rulesFile: "~/.openclaw/opencode-bridge-rules.md"  // optional override
-        },
-      },
-    },
-  },
-}
-```
-
-## Tool Policy
-
-The `opencode_dispatch` tool is registered by the plugin, but **it is filtered out by the `coding` tool profile** (the default for local setups). To make the tool visible to the model, add it to `tools.alsoAllow` in your Gateway config:
-
-```json5
-{
-  tools: {
-    profile: "coding",
-    alsoAllow: ["opencode_dispatch"],
-  },
-}
-```
-
-Without this, the plugin loads successfully (hooks fire, directive is injected), but the model never receives the `opencode_dispatch` tool schema, so it cannot actually call it.
-
-If you use `tools.profile: "full"` or have no profile set, no extra config is needed.
-
-## Customizing Rules
-
-The plugin ships with bundled rules in `rules/opencode-bridge.md`. To customize:
-
-1. Copy `rules/opencode-bridge.md` to your preferred location
-2. Set `rulesFile` in plugin config to point to it
+The server is started automatically by the `on_session_start` hook, so the web UI is available from your first `opencode_dispatch` call.
 
 ## Tool
 
 ### `opencode_dispatch`
 
-```typescript
-opencode_dispatch({
-  directory: "/path/to/project",
-  task: "Fix login validation in LoginForm component",
-  title: "fix-login-validation"  // optional
-})
-```
-
-Returns:
+Sends a coding task to OpenCode via HTTP API. Creates a session, injects collaboration rules, and returns immediately with the session name and web UI URL.
 
 ```json
 {
   "status": "dispatched",
   "session_id": "ses_abc123",
-  "session_name": "fix-login-validation",
+  "session_name": "Login API",
   "web_ui": "http://localhost:4096/session/ses_abc123",
-  "directory": "/path/to/project",
-  "message": "OpenCode session 'fix-login-validation' started.\nMonitor: http://localhost:4096/session/ses_abc123\nAttach: opencode attach http://localhost:4096 --dir /path/to/project --session ses_abc123"
+  "message": "OpenCode session 'Login API' started.\nMonitor: http://localhost:4096/session/ses_abc123"
 }
 ```
+
+## Installation
+
+### Prerequisites
+
+1. **Hermes Agent** — [install](https://hermes-agent.nousresearch.com/docs)
+2. **OpenCode** — see [opencode.ai](https://opencode.ai) for installation and authentication
+
+### Install the plugin
+
+```bash
+# Install from GitHub (recommended)
+hermes plugins install dev-hann/hermes-opencode-bridge --enable
+
+# Or use the full URL:
+# hermes plugins install https://github.com/dev-hann/hermes-opencode-bridge --enable
+```
+
+That's it — `hermes plugins install` handles cloning, placement, and enabling automatically.
+
+Start a new session (tools and hooks apply on new sessions):
+
+```bash
+hermes
+```
+
+### Verify
+
+```bash
+hermes tools list | grep opencode
+# Should show: ✓ enabled  opencode  🔌 Opencode
+```
+
+## Customizing Rules
+
+The plugin uses a **seed pattern** for collaboration rules:
+
+1. On the first `opencode_dispatch` call, `~/.hermes/opencode-bridge-rule.md` is created by copying the plugin's `template/hermes-opencode-bridge.md`.
+2. From then on, `~/.hermes/opencode-bridge-rule.md` is read on every dispatch.
+3. Edit it freely — the rules file lives outside the plugin directory, so plugin updates/reinstalls never overwrite it.
+
+The bundled template covers:
+
+- Git workflow (worktree isolation, conventional commits)
+- Code quality (TDD, no `any` types, lint passing)
+- Error handling (fix before moving on)
+- Communication (concise summaries)
+
+### OpenCode standalone usage
+
+This plugin does **not** modify OpenCode's global config. When you run `opencode` directly (without Hermes), the collaboration rules are not loaded — OpenCode behaves normally.
+
+## Requirements
+
+- Python 3.10+ (bundled with Hermes Agent)
+- OpenCode 1.0+ (serve mode)
+- Hermes Agent (any recent version with plugin support)
 
 ## License
 
