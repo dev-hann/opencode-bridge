@@ -1,4 +1,4 @@
-# hermes-opencode-bridge
+# opencode-bridge
 
 A [Hermes Agent](https://github.com/NousResearch/hermes-agent) plugin that delegates **ALL code work** to [OpenCode](https://opencode.ai).
 
@@ -32,13 +32,13 @@ You monitor progress at http://localhost:4096
 ## Structure
 
 ```
-hermes-opencode-bridge/
+opencode-bridge/
 ├── plugin.yaml                       # Manifest (kind: standalone)
 ├── __init__.py                       # register(ctx) — 1 tool + 2 hooks
 ├── server.py                         # Server lifecycle (start / health check / dedup)
 ├── api.py                            # HTTP client (dispatch + seed rules)
 ├── template/
-│   └── hermes-opencode-bridge.md     # Default rules template (seed)
+│   └── opencode-bridge.md            # Default rules template (seed)
 └── README.md
 ```
 
@@ -97,10 +97,10 @@ Sends a coding task to OpenCode via HTTP API. Creates a session, injects collabo
 
 ```bash
 # Install from GitHub (recommended)
-hermes plugins install dev-hann/hermes-opencode-bridge --enable
+hermes plugins install dev-hann/opencode-bridge --enable
 
 # Or use the full URL:
-# hermes plugins install https://github.com/dev-hann/hermes-opencode-bridge --enable
+# hermes plugins install https://github.com/dev-hann/opencode-bridge --enable
 ```
 
 That's it — `hermes plugins install` handles cloning, placement, and enabling automatically.
@@ -122,7 +122,7 @@ hermes tools list | grep opencode
 
 The plugin uses a **seed pattern** for collaboration rules:
 
-1. On the first `opencode_dispatch` call, `~/.hermes/opencode-bridge-rule.md` is created by copying the plugin's `template/hermes-opencode-bridge.md`.
+1. On the first `opencode_dispatch` call, `~/.hermes/opencode-bridge-rule.md` is created by copying the plugin's `template/opencode-bridge.md`.
 2. From then on, `~/.hermes/opencode-bridge-rule.md` is read on every dispatch.
 3. Edit it freely — the rules file lives outside the plugin directory, so plugin updates/reinstalls never overwrite it.
 

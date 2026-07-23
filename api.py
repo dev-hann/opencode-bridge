@@ -9,7 +9,7 @@ import urllib.request
 from server import BASE_URL, is_running
 
 _RULES_PATH = pathlib.Path.home() / ".hermes" / "opencode-bridge-rule.md"
-_TEMPLATE_PATH = pathlib.Path(__file__).parent / "template" / "hermes-opencode-bridge.md"
+_TEMPLATE_PATH = pathlib.Path(__file__).parent / "template" / "opencode-bridge.md"
 
 
 def _http(method: str, path: str, body: dict | None = None, timeout: int = 30) -> dict:
@@ -28,7 +28,7 @@ def _load_rules() -> str:
     """Load user rules, seeding from the bundled template on first use.
 
     If ~/.hermes/opencode-bridge-rule.md does not exist, copy it from the plugin's
-    template/hermes-opencode-bridge.md so the user gets a sensible default
+    template/opencode-bridge.md so the user gets a sensible default
     they can then freely edit. The rules file lives OUTSIDE the plugin
     directory, so plugin updates/reinstalls never overwrite it.
     """

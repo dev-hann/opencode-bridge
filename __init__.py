@@ -1,4 +1,4 @@
-"""hermes-opencode-bridge — Delegate ALL code work to OpenCode.
+"""opencode-bridge — Delegate ALL code work to OpenCode.
 
 Three-layer design:
   [A] Hermes behavior rules -> pre_llm_call hook (inject directive on code keywords)
@@ -159,4 +159,4 @@ def register(ctx) -> None:
     ctx.register_hook("on_session_start", _on_session_start)
     ctx.register_hook("pre_llm_call", _on_pre_llm_call)
 
-    logger.info("hermes-opencode-bridge plugin registered (1 tool, 2 hooks)")
+    logger.info("opencode-bridge plugin registered (1 tool, 2 hooks)")

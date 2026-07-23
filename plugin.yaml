@@ -1,4 +1,4 @@
-name: hermes-opencode-bridge
+name: opencode-bridge
 version: 0.2.0
 description: "Hermes Agent plugin that delegates ALL code work to OpenCode. Dispatches tasks via HTTP API, injects collaboration rules, manages server lifecycle."
 author: hann
