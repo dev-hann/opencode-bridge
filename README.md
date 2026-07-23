@@ -80,6 +80,23 @@ The plugin ships with bundled rules in `rules/opencode-bridge.md`. To customize:
 1. Copy `rules/opencode-bridge.md` to your preferred location
 2. Set `rulesFile` in plugin config to point to it
 
+## Tool Policy
+
+The `opencode_dispatch` tool is registered by the plugin, but **it is filtered out by the `coding` tool profile** (the default for local setups). To make the tool visible to the model, add it to `tools.alsoAllow` in your Gateway config:
+
+```json5
+{
+  tools: {
+    profile: "coding",
+    alsoAllow: ["opencode_dispatch"],
+  },
+}
+```
+
+Without this, the plugin loads successfully (hooks fire, directive is injected), but the model never receives the `opencode_dispatch` tool schema, so it cannot actually call it.
+
+If you use `tools.profile: "full"` or have no profile set, no extra config is needed.
+
 ## Tool
 
 ### `opencode_dispatch`
