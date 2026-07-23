@@ -1,0 +1,32 @@
+{
+  "id": "opencode-bridge",
+  "name": "OpenCode Bridge",
+  "description": "Delegate ALL code work to OpenCode. Manages server lifecycle, injects collaboration rules, and dispatches tasks via HTTP API.",
+  "version": "0.1.0",
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": ["opencode_dispatch"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "port": {
+        "type": "number",
+        "description": "OpenCode server port (default: 4096)",
+        "default": 4096
+      },
+      "hostname": {
+        "type": "string",
+        "description": "OpenCode server hostname (default: 0.0.0.0)",
+        "default": "0.0.0.0"
+      },
+      "rulesFile": {
+        "type": "string",
+        "description": "Path to collaboration rules file. If omitted, uses bundled rules."
+      }
+    }
+  }
+}
